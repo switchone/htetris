@@ -18,17 +18,28 @@ import qualified Graphics.UI.GLUT as GLUT
 
 import Reactive.Banana --((<*>), (<$>))
 
+import ReactHelp
+
 data Shape = Square (GL.GLfloat,GL.GLfloat,GL.GLfloat)
 
-fire = snd
-
-setupGraphics etimer = do
+setupGraphics etimer eleft eright edown = do
   (progname, args) <- GLUT.getArgsAndInitialize
   --GLUT.initialWindowMode $ [GLUT.DoubleBuffer, GLUT.RGBA, GLUT.Depth]
   windoe <- GLUT.createWindow "Tetris mark 1" -- 500 500
   GLUT.displayCallback $= (render [])
   GLUT.reshapeCallback $= Just reshape
-  GLUT.addTimerCallback 1000 $ loopTimer etimer 
+  GLUT.keyboardMouseCallback $= Just (keyboardMouse (eleft, eright, edown))
+  GLUT.addTimerCallback 100 $ loopTimer etimer 
+
+--keyboardMouse :: GLUT.Key -> GLUT.KeyState -> GLUT.Modifiers -> GLUT.Position -> IO ()
+keyboardMouse :: (EventSource (),EventSource (),EventSource ()) -> GLUT.KeyboardMouseCallback
+keyboardMouse (eleft, eright, edown) key GLUT.Down _ _ = 
+  case key of 
+    (GLUT.SpecialKey GLUT.KeyLeft) -> fire eleft ()
+    (GLUT.SpecialKey GLUT.KeyRight) -> fire eright ()
+    (GLUT.SpecialKey GLUT.KeyDown) -> fire edown ()
+    _ -> return ()
+keyboardMouse _ _ _ _ _ = return ()
 
 loopTimer event = do
   fire event ()
@@ -36,7 +47,7 @@ loopTimer event = do
 
 runGraphics = GLUT.mainLoop
 
-renderBoard square = render [square]
+renderBoard squares = render squares
 
 reshape (GL.Size xsize ysize) =
   let ratio = (/) (fromIntegral xsize) (fromIntegral ysize) in
