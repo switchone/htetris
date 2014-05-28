@@ -22,7 +22,9 @@ module BoardStructure
         BoardSquare (BoardSquare),
         Board (Board),
         constructEmptyBoard,
-        constructRandomBoardGen)
+        constructRandomBoardGen,
+        addListToBoard,
+        isShapePlaced)
        where
 
 import Data.Array
@@ -40,16 +42,28 @@ data BoardSquare = BoardSquare (Bool, Color)
                             
 data Board = Board (Array (Int, Int) BoardSquare)
            deriving Show
-               
+
+--newtype Board = Array (Int, Int) BoardSquare
 
 constructEmptyBoard w h =
   let indices = ((0,0),(w-1,h-1))
       in
-   array indices 
-   [(i, (False, Clear)) | i <- range indices]
-   
-constructEmptyBoardInt :: (Num t, Num t1, Ix t, Ix t1) => t -> t1 -> Array (t, t1) (Bool, Color)
-constructEmptyBoardInt = constructEmptyBoard
+   Board $ array indices 
+   [(i, BoardSquare (False, Clear)) | i <- range indices]
+
+addListToBoard :: Board -> [((Int,Int),Color)] -> Board
+addListToBoard (Board board) sqrList = 
+  let lst = map (\((x,y),c) -> ((x,y), BoardSquare (True, c))) sqrList in
+  Board (board // lst)
+
+isShapePlaced :: Board -> [((Int,Int),Color)] -> Bool
+isShapePlaced (Board board) sqrList = 
+  let isSquarePlaced ((x,y), _) b =
+        case board!(x,y-1) of
+          BoardSquare (_,Clear) -> False
+          BoardSquare (_, Hue _) -> True
+  in
+   foldl (\acc coord -> (acc && isSquarePlaced coord board)) False sqrList
 
 instance Arbitrary BoardSquare where
   arbitrary = do

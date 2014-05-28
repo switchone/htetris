@@ -3,7 +3,10 @@ module Graphics (
   Shape (Square),
   setupGraphics,
   runGraphics,
-  renderBoard)
+  renderBoard,
+  red,
+  blue,
+  convertColor)
   
   where
 
@@ -18,20 +21,39 @@ import qualified Graphics.UI.GLUT as GLUT
 
 import Reactive.Banana --((<*>), (<$>))
 
+import BoardStructure
 import ReactHelp
 
-data Shape = Square (GL.GLfloat,GL.GLfloat,GL.GLfloat)
+data Shape = Square (GL.GLfloat,GL.GLfloat,GL.GLfloat, GL.Color4 GL.GLfloat)
 
-setupGraphics etimer eleft eright edown = do
+--COLORS-------------------------------
+
+red :: GL.Color4 GL.GLfloat
+red = GL.Color4 1 0 0 1
+
+blue :: GL.Color4 GL.GLfloat
+blue = GL.Color4 0 0 1 1
+
+convertColor :: Color -> GL.Color4 GL.GLfloat
+convertColor Clear = GL.Color4 1 1 1 1
+convertColor (Hue col) = 
+  case col of _
+                | col <= 0xFF -> GL.Color4 0 0 1 1
+                | col <= 0xFFFF -> GL.Color4 0 1 0 1
+                | col <= 0xFFFFFF -> GL.Color4 1 0 0 1
+                | otherwise -> GL.Color4 0 0 0 1
+
+
+setupGraphics einit etimer eleft eright edown = do
   (progname, args) <- GLUT.getArgsAndInitialize
   --GLUT.initialWindowMode $ [GLUT.DoubleBuffer, GLUT.RGBA, GLUT.Depth]
-  windoe <- GLUT.createWindow "Tetris mark 1" -- 500 500
+  windoe <- GLUT.createWindow "Tetris mark 2" -- 500 500
   GLUT.displayCallback $= (render [])
   GLUT.reshapeCallback $= Just reshape
   GLUT.keyboardMouseCallback $= Just (keyboardMouse (eleft, eright, edown))
-  GLUT.addTimerCallback 100 $ loopTimer etimer 
+  GLUT.addTimerCallback 100 $ fire einit ()
+  GLUT.addTimerCallback 1000 $ loopTimer etimer 
 
---keyboardMouse :: GLUT.Key -> GLUT.KeyState -> GLUT.Modifiers -> GLUT.Position -> IO ()
 keyboardMouse :: (EventSource (),EventSource (),EventSource ()) -> GLUT.KeyboardMouseCallback
 keyboardMouse (eleft, eright, edown) key GLUT.Down _ _ = 
   case key of 
@@ -62,13 +84,16 @@ reshape (GL.Size xsize ysize) =
      print "Change Shape!"
      GLUT.postRedisplay Nothing
 
-renderSquare (Square (x, y, width)) = 
-  let (x1,y1) = (x,y)
+--renderSquare (Square (x, y, width)) = 
+renderSquare sqr = 
+  let Square (x,y,width,col) = sqr
+      (x1,y1) = (x,y)
       (x2,y2) = (x, y + width)
       (x3,y3) = (x+width, y+width)
       (x4,y4) = (x+width, y)
       in
    GL.renderPrimitive GL.Quads $ do
+     GL.color col
      GL.vertex $ (GL.Vertex2 x1 y1 :: GL.Vertex2 GL.GLfloat)
      GL.vertex $ (GL.Vertex2 x2 y2 :: GL.Vertex2 GL.GLfloat)
      GL.vertex $ (GL.Vertex2 x3 y3 :: GL.Vertex2 GL.GLfloat)
@@ -89,7 +114,6 @@ render squares = do
   GL.matrixMode $= GL.Modelview 0
   GL.loadIdentity
   
-  GL.color (GL.Color4 1 0 1 1 :: GL.Color4 GL.GLfloat)
   mapM_ renderSquare squares
   GL.flush
     --GLUT.swapBuffers
